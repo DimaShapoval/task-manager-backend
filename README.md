@@ -26,6 +26,6 @@ npm run typeorm -- migration:generate ./migrations/NameOfMigration -d src/data-s
 ```
 ### Run
 ```bash
-# npm run typeorm -- migration:run -d src/data-source.ts
+npm run typeorm -- migration:run -d src/data-source.ts
 ```
 
