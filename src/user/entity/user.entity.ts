@@ -18,10 +18,10 @@ export class User {
   @Column({ default: false })
   isEmailConfirmed: boolean;
 
-  @Column({ nullable: false })
+  @Column({ nullable: true })
   firstName: string;
 
-  @Column({ nullable: false })
+  @Column({ nullable: true })
   lastName: string;
 
   @OneToMany(() => Board, board => board.user)
