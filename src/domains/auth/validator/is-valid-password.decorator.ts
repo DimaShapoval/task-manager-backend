@@ -9,8 +9,6 @@
           options: validationOptions,
           validator: {
             validate(value: any, args: ValidationArguments) {
-              // Custom password strength logic here
-              // Example: requires at least one uppercase, one lowercase, one number, one special char, and min length
               const hasUppercase = /[A-Z]/.test(value);
               const hasLowercase = /[a-z]/.test(value);
               const hasNumber = /[0-9]/.test(value);
