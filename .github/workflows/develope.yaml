@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
   deployments: write
-  status: write
+  statuses: write
 
 jobs:
   first-job:
