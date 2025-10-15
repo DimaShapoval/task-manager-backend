@@ -1,5 +1,6 @@
+import { ConfigService } from '@nestjs/config';
 import * as dotenv from 'dotenv';
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
 import { IJwtPayload } from '../types/auth';
@@ -10,19 +11,33 @@ dotenv.config();
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-  constructor(private userRepository: UserRepository) {
+  constructor(
+    private userRepository: UserRepository,
+    private configService: ConfigService,
+  ) {
     super({
-      secretOrKey: process.env.JWT_KEY,
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      secretOrKey: configService.get<string>('JWT_KEY'),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        (req) => req?.cookies?.accessToken
+
+      ]),
     });
   }
 
   async validate(payload: IJwtPayload): Promise<IUser> {
-    const { email } = payload;
-    const user = await this.userRepository.findOneBy({ email });
+    const { email, isEmailConfirmed } = payload;
+    const user = await this.userRepository.findOne({
+      where: {
+        email
+      }
+    });
+    console.log(isEmailConfirmed)
 
     if (!user) {
       throw new UnauthorizedException('Unauthorized');
+    } else if (!isEmailConfirmed) {
+      throw new BadRequestException('Email not confirmed');
     }
 
     return user;

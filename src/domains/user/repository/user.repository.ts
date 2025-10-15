@@ -3,6 +3,7 @@ import { User } from "../entity/user.entity";
 import { ConflictException, Injectable } from "@nestjs/common";
 import { IUserAuth } from "../../../types/auth";
 import { hashPassword } from "../../../utils/password.util";
+import { IUser } from "../../../types/user";
 
 @Injectable()
 export class UserRepository extends Repository<User> {
@@ -10,7 +11,7 @@ export class UserRepository extends Repository<User> {
     super(User, dataSource.createEntityManager());
   }
 
-  async createUser(userData: IUserAuth): Promise<{ email: string }> {
+  async createUser(userData: IUserAuth): Promise<IUser> {
     const existingUser = await this.findOne({ where: { email: userData.email } });
     if (existingUser) {
       throw new ConflictException('User already exists');
@@ -20,7 +21,7 @@ export class UserRepository extends Repository<User> {
 
     const user = this.create(userData);
     await this.save(user);
-    return { email: user.email };
+    return user;
   }
 
 }  

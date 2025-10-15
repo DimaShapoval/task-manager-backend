@@ -5,4 +5,6 @@ export interface IUserAuth {
 
 export interface IJwtPayload {
     email: string;
+    isEmailConfirmed: boolean;
+
 }
