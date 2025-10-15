@@ -7,8 +7,26 @@ jobs:
   first-job:
     runs-on: ubuntu-latest
     steps:
-      - name: First step
-        run: echo "This is the first step of the first job."
-      - name: Second step
-        run: echo "This is the second step of the first job."
-      - run: echo "🍏 This job's status is ${{ job.status }}."
+      - name: Get Code
+        uses: actions/checkout@v3
+      - name: Use Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install Packages
+        run: npm ci 
+      - name: Create GitHub Deployment
+        uses: bobheadxi/deployments@v1
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: develop
+      - name: Deploy to Render
+        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
+      - name: Finish Deployment
+        uses: bobheadxi/deployments@v1
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: production
+          status: success
