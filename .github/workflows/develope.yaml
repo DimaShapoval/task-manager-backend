@@ -1,5 +1,8 @@
 name: First Workflow
-on: [push]
+on:
+  push:
+    branches:
+      - develop
 jobs:
   first-job:
     runs-on: ubuntu-latest
