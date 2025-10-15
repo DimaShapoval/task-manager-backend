@@ -3,6 +3,12 @@ on:
   push:
     branches:
       - develop
+
+permissions:
+  contents: read
+  deployments: write
+  status: write
+
 jobs:
   first-job:
     runs-on: ubuntu-latest
