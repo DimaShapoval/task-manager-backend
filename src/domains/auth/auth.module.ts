@@ -17,7 +17,7 @@ dotenv.config();
             imports: [ConfigModule],
             inject: [ConfigService],
             useFactory: (configService: ConfigService) => ({
-                secret: configService.get<string>('jwtKey'),
+                secret: configService.get<string>('JWT_KEY'),
                 signOptions: { expiresIn: 3600 },
             })
         }),
