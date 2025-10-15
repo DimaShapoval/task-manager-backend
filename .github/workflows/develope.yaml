@@ -10,8 +10,24 @@ permissions:
   statuses: write
 
 jobs:
-  first-job:
+  deploy:
+    name: Deploy to Render
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: pt
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+    env:
+      DB_HOST: mysql://user:pass@127.0.0.1:3306/appdb
     steps:
       - name: Get Code
         uses: actions/checkout@v3
@@ -21,12 +37,17 @@ jobs:
           node-version: '18'
       - name: Install Packages
         run: npm ci 
-      - name: Create GitHub Deployment
+      - name: Start Deployment to Render
         uses: bobheadxi/deployments@v1
         with:
           step: start
           token: ${{ secrets.GITHUB_TOKEN }}
+          id: deployment-start
           env: develop
+      - name: Run Nest Build
+        run: npm run build
+      - name: Run Migrations
+        run: npm run typeorm -- migration:run -d src/data-source.ts
       - name: Deploy to Render
         run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
       - name: Finish Deployment
@@ -36,3 +57,4 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           env: production
           status: success
+          id: ${{ steps.deployment-start.outputs.id }}
