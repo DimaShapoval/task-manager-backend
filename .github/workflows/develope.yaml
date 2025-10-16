@@ -57,4 +57,4 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           env: production
           status: success
-          deployment_id: ${{ steps.deployment-start.outputs.id }}
+          deployment_id: ${{ steps.deployment-start.outputs.deployment_id }}
