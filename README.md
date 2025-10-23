@@ -22,7 +22,7 @@ $ npm run start:prod
 ## Migrations
 ### Generate
 ```bash
-npm run typeorm -- migration:generate ./migrations/NameOfMigration -d src/data-source.ts
+npm run typeorm -- migration:generate ./src/migrations/NameOfMigration -d src/data-source.ts
 ```
 ### Run
 ```bash
