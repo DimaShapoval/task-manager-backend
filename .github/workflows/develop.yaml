@@ -1,0 +1,98 @@
+name: First Workflow
+on:
+  push:
+    branches:
+      - develop
+
+permissions:
+  contents: write
+  deployments: write
+  statuses: write
+
+jobs:
+  deploy:
+    name: Deploy to Render
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: pt
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+    env:
+      DB_HOST: mysql://user:pass@127.0.0.1:3306/appdb
+    steps:
+      - name: Get Code
+        uses: actions/checkout@v3
+        
+      - name: Use Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Packages
+        run: npm ci 
+
+      - name: Start Deployment to Render
+        uses: bobheadxi/deployments@v1
+        id: deployment-start
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: develop
+
+      - name: Run Nest Build
+        run: npm run build
+      - name: Run Migrations
+        run: npm run typeorm -- migration:run -d src/data-source.ts
+
+      - name: Deploy to Render
+        id: deploy-render
+        run: |
+          response=$(curl -s -w "%{http_code}" -X POST ${{ secrets.RENDER_DEPLOY_HOOK }})
+          http_code=$(echo "$response" | tail -c 4)
+          body=$(echo "$response" | head -c -4)
+
+          echo "HTTP Status Code: $http_code"
+          echo "Response Body: $body"
+
+          echo "http_code=$http_code" >> $GITHUB_OUTPUT
+          echo "response_body=$body" >> $GITHUB_OUTPUT
+
+      - name: Check Deployment Response
+        run: |
+          if [ "${{ steps.render-deploy.outputs.http_code }}" -eq "200" ] || [ "${{ steps.render-deploy.outputs.http_code }}" -eq "201" ]; then
+            echo "✅ Deployment successful"
+            exit 0
+          else
+            echo "❌ Deployment failed with HTTP code: ${{ steps.render-deploy.outputs.http_code }}"
+            echo "Response: ${{ steps.render-deploy.outputs.response_body }}"
+            exit 1
+          fi
+
+      - name: Finish Deployment (Success)
+        if: steps.render-deploy.outputs.http_code == '200' || steps.render-deploy.outputs.http_code == '201'
+        uses: bobheadxi/deployments@v1
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: develop
+          status: success
+          deployment_id: ${{ steps.deployment-start.outputs.deployment_id }}
+
+      - name: Finish Deployment (Failure)
+        if: steps.render-deploy.outputs.http_code != '200' && steps.render-deploy.outputs.http_code != '201'
+        uses: bobheadxi/deployments@v1
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: develop
+          status: failure
+          deployment_id: ${{ steps.deployment-start.outputs.deployment_id }}
