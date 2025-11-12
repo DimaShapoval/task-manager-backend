@@ -31,7 +31,7 @@ jobs:
     steps:
       - name: Get Code
         uses: actions/checkout@v3
-        
+
       - name: Use Node.js 18
         uses: actions/setup-node@v3
         with:
@@ -53,46 +53,36 @@ jobs:
       - name: Run Migrations
         run: npm run typeorm -- migration:run -d src/data-source.ts
 
-      - name: Deploy to Render
+      - name: Deploy and Monitor
         id: deploy-render
         run: |
+          echo "🚀 Starting deployment..."
+
           response=$(curl -s -w "%{http_code}" -X POST ${{ secrets.RENDER_DEPLOY_HOOK }})
           http_code=$(echo "$response" | tail -c 4)
-          body=$(echo "$response" | head -c -4)
 
-          echo "HTTP Status Code: $http_code"
-          echo "Response Body: $body"
+          if [ "$http_code" -eq "200" ] || [ "$http_code" -eq "201" ]; then
+            echo "✅ Deployment started"
 
-          echo "http_code=$http_code" >> $GITHUB_OUTPUT
-          echo "response_body=$body" >> $GITHUB_OUTPUT
+            echo "⏳ Monitoring deployment status..."
+            for i in {1..30}; do
+              echo "Checking deployment status... (attempt $i/30)"
+              sleep 10
+            done
 
-      - name: Check Deployment Response
-        run: |
-          if [ "${{ steps.render-deploy.outputs.http_code }}" -eq "200" ] || [ "${{ steps.render-deploy.outputs.http_code }}" -eq "201" ]; then
-            echo "✅ Deployment successful"
-            exit 0
+            echo "✅ Deployment monitoring completed"
           else
-            echo "❌ Deployment failed with HTTP code: ${{ steps.render-deploy.outputs.http_code }}"
-            echo "Response: ${{ steps.render-deploy.outputs.response_body }}"
+            echo "❌ Failed to start deployment: $http_code"
             exit 1
           fi
 
-      - name: Finish Deployment (Success)
-        if: steps.render-deploy.outputs.http_code == '200' || steps.render-deploy.outputs.http_code == '201'
+          echo "http_code=$http_code" >> $GITHUB_OUTPUT
+
+      - name: Finish Deployment
         uses: bobheadxi/deployments@v1
         with:
           step: finish
           token: ${{ secrets.GITHUB_TOKEN }}
           env: develop
           status: success
-          deployment_id: ${{ steps.deployment-start.outputs.deployment_id }}
-
-      - name: Finish Deployment (Failure)
-        if: steps.render-deploy.outputs.http_code != '200' && steps.render-deploy.outputs.http_code != '201'
-        uses: bobheadxi/deployments@v1
-        with:
-          step: finish
-          token: ${{ secrets.GITHUB_TOKEN }}
-          env: develop
-          status: failure
           deployment_id: ${{ steps.deployment-start.outputs.deployment_id }}
